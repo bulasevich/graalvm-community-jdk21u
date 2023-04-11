@@ -139,10 +139,7 @@ public final class ReentrantBlockIterator {
         StructuredGraph graph = start.getBeginNode().graph();
         CompilationAlarm compilationAlarm = CompilationAlarm.current();
         while (true) {
-            if (compilationAlarm.hasExpired()) {
-                double period = CompilationAlarm.Options.CompilationExpirationPeriod.getValue(graph.getOptions());
-                throw new PermanentBailoutException("Compilation exceeded %f seconds during CFG traversal", period);
-            }
+            //CompilationAlarm.checkProgress(start.getCfg().graph);
             HIRBlock next = null;
             if (stopAtBlock != null && stopAtBlock.test(current)) {
                 states.put(current.getBeginNode(), state);

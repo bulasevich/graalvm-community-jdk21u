@@ -31,8 +31,8 @@ import java.util.Optional;
 import org.graalvm.collections.EconomicSet;
 import org.graalvm.compiler.core.common.util.CompilationAlarm;
 import org.graalvm.compiler.debug.DebugContext;
-import org.graalvm.compiler.graph.Graph.NodeEventScope;
 import org.graalvm.compiler.graph.Graph;
+import org.graalvm.compiler.graph.Graph.NodeEventScope;
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.nodes.GraphState;
 import org.graalvm.compiler.nodes.StructuredGraph;
@@ -94,9 +94,9 @@ public abstract class EffectsPhase<CoreProvidersT extends CoreProviders> extends
         LoopUtility.removeObsoleteProxies(graph, context, canonicalizer);
         assert unscheduled || strategy != null;
         boolean changed = false;
-        CompilationAlarm compilationAlarm = CompilationAlarm.current();
         DebugContext debug = graph.getDebug();
-        for (int iteration = 0; iteration < maxIterations && !compilationAlarm.hasExpired(); iteration++) {
+        for (int iteration = 0; iteration < maxIterations; iteration++) {
+            //CompilationAlarm.checkProgress(graph);
             try (DebugContext.Scope s = debug.scope(debug.areScopesEnabled() ? "iteration " + iteration : null)) {
                 ScheduleResult schedule;
                 ControlFlowGraph cfg;
