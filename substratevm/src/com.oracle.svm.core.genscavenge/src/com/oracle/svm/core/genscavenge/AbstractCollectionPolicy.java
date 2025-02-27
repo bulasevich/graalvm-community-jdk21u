@@ -40,6 +40,7 @@ import com.oracle.svm.core.heap.GCCause;
 import com.oracle.svm.core.heap.PhysicalMemory;
 import com.oracle.svm.core.heap.ReferenceAccess;
 import com.oracle.svm.core.jdk.UninterruptibleUtils;
+import com.oracle.svm.core.os.CommittedMemoryProvider;
 import com.oracle.svm.core.thread.JavaSpinLockUtils;
 import com.oracle.svm.core.thread.VMOperation;
 import com.oracle.svm.core.util.UnsignedUtils;
@@ -47,6 +48,10 @@ import com.oracle.svm.core.util.VMError;
 
 import jdk.internal.misc.Unsafe;
 
+/**
+ * Note that a lot of methods in this class are final. Subclasses may only override certain methods
+ * to avoid inconsistencies between the different heap size values.
+ */
 abstract class AbstractCollectionPolicy implements CollectionPolicy {
 
     protected static final int MIN_SPACE_SIZE_IN_ALIGNED_CHUNKS = 8;
@@ -213,44 +218,44 @@ abstract class AbstractCollectionPolicy implements CollectionPolicy {
     }
 
     @Override
-    public UnsignedWord getInitialEdenSize() {
+    public final UnsignedWord getInitialEdenSize() {
         guaranteeSizeParametersInitialized();
         return sizes.initialEdenSize;
     }
 
     @Override
     @Uninterruptible(reason = "Called from uninterruptible code.", mayBeInlined = true)
-    public UnsignedWord getMaximumEdenSize() {
+    public final UnsignedWord getMaximumEdenSize() {
         guaranteeSizeParametersInitialized();
         return alignDown(sizes.maxYoungSize.subtract(survivorSize.multiply(2)));
     }
 
     @Override
-    public UnsignedWord getMaximumHeapSize() {
+    public final UnsignedWord getMaximumHeapSize() {
         guaranteeSizeParametersInitialized();
         return sizes.maxHeapSize;
     }
 
     @Override
-    public UnsignedWord getMaximumYoungGenerationSize() {
+    public final UnsignedWord getMaximumYoungGenerationSize() {
         guaranteeSizeParametersInitialized();
         return sizes.maxYoungSize;
     }
 
     @Override
-    public UnsignedWord getInitialSurvivorSize() {
+    public final UnsignedWord getInitialSurvivorSize() {
         guaranteeSizeParametersInitialized();
         return sizes.initialSurvivorSize;
     }
 
     @Override
-    public UnsignedWord getMaximumSurvivorSize() {
+    public final UnsignedWord getMaximumSurvivorSize() {
         guaranteeSizeParametersInitialized();
         return sizes.maxSurvivorSize();
     }
 
     @Override
-    public UnsignedWord getCurrentHeapCapacity() {
+    public final UnsignedWord getCurrentHeapCapacity() {
         assert VMOperation.isGCInProgress() : "use only during GC";
         guaranteeSizeParametersInitialized();
         return edenSize.add(survivorSize).add(oldSize);
@@ -258,7 +263,7 @@ abstract class AbstractCollectionPolicy implements CollectionPolicy {
 
     @Override
     @Uninterruptible(reason = "Called from uninterruptible code.", mayBeInlined = true)
-    public UnsignedWord getSurvivorSpacesCapacity() {
+    public final UnsignedWord getSurvivorSpacesCapacity() {
         assert VMOperation.isGCInProgress() : "use only during GC";
         guaranteeSizeParametersInitialized();
         return survivorSize;
@@ -266,25 +271,25 @@ abstract class AbstractCollectionPolicy implements CollectionPolicy {
 
     @Override
     @Uninterruptible(reason = "Ensure reading a consistent value.")
-    public UnsignedWord getYoungGenerationCapacity() {
+    public final UnsignedWord getYoungGenerationCapacity() {
         guaranteeSizeParametersInitialized();
         return edenSize.add(survivorSize);
     }
 
     @Override
-    public UnsignedWord getInitialOldSize() {
+    public final UnsignedWord getInitialOldSize() {
         guaranteeSizeParametersInitialized();
         return sizes.initialOldSize();
     }
 
     @Override
-    public UnsignedWord getMaximumOldSize() {
+    public final UnsignedWord getMaximumOldSize() {
         guaranteeSizeParametersInitialized();
         return sizes.maxOldSize();
     }
 
     @Override
-    public UnsignedWord getOldGenerationCapacity() {
+    public final UnsignedWord getOldGenerationCapacity() {
         guaranteeSizeParametersInitialized();
         return oldSize;
     }
@@ -323,7 +328,7 @@ abstract class AbstractCollectionPolicy implements CollectionPolicy {
     }
 
     @Override
-    public UnsignedWord getMinimumHeapSize() {
+    public final UnsignedWord getMinimumHeapSize() {
         return sizes.minHeapSize;
     }
 
@@ -331,7 +336,6 @@ abstract class AbstractCollectionPolicy implements CollectionPolicy {
     protected abstract long gcCount();
 
     protected SizeParameters computeSizeParameters(SizeParameters existing) {
-        UnsignedWord addressSpaceSize = ReferenceAccess.singleton().getMaxAddressSpaceSize();
         UnsignedWord minYoungSpaces = minSpaceSize(); // eden
         if (HeapParameters.getMaxSurvivorSpaces() > 0) {
             minYoungSpaces = minYoungSpaces.add(minSpaceSize().multiply(2)); // survivor from and to
@@ -348,7 +352,7 @@ abstract class AbstractCollectionPolicy implements CollectionPolicy {
             maxHeap = PhysicalMemory.getCachedSize().unsignedDivide(100).multiply(HeapParameters.getMaximumHeapSizePercent());
         }
         UnsignedWord unadjustedMaxHeap = maxHeap;
-        maxHeap = UnsignedUtils.clamp(alignDown(maxHeap), minAllSpaces, alignDown(addressSpaceSize));
+        maxHeap = UnsignedUtils.clamp(alignDown(maxHeap), minAllSpaces, alignDown(getHeapSizeLimit()));
 
         UnsignedWord maxYoung;
         long optionMaxYoung = SubstrateGCOptions.MaxNewSize.getValue();
@@ -359,11 +363,11 @@ abstract class AbstractCollectionPolicy implements CollectionPolicy {
         } else {
             maxYoung = maxHeap.unsignedDivide(AbstractCollectionPolicy.NEW_RATIO + 1);
         }
-        maxYoung = UnsignedUtils.clamp(alignDown(maxYoung), minYoungSpaces, maxHeap.subtract(minSpaceSize()));
+        maxYoung = UnsignedUtils.clamp(alignDown(maxYoung), minYoungSpaces, getYoungSizeLimit(maxHeap));
 
         UnsignedWord maxOld = alignDown(maxHeap.subtract(maxYoung));
         maxHeap = maxYoung.add(maxOld);
-        VMError.guarantee(maxOld.aboveOrEqual(minSpaceSize()) && maxHeap.belowOrEqual(addressSpaceSize) &&
+        VMError.guarantee(maxOld.aboveOrEqual(minSpaceSize()) && maxHeap.belowOrEqual(getHeapSizeLimit()) &&
                         (maxHeap.belowOrEqual(unadjustedMaxHeap) || unadjustedMaxHeap.belowThan(minAllSpaces)));
 
         UnsignedWord minHeap = WordFactory.zero();
@@ -399,6 +403,14 @@ abstract class AbstractCollectionPolicy implements CollectionPolicy {
         initialEden = minSpaceSize(alignDown(initialEden));
 
         return SizeParameters.get(existing, maxHeap, maxYoung, initialHeap, initialEden, initialSurvivor, minHeap);
+    }
+
+    protected UnsignedWord getHeapSizeLimit() {
+        return CommittedMemoryProvider.get().getCollectedHeapAddressSpaceSize();
+    }
+
+    protected UnsignedWord getYoungSizeLimit(UnsignedWord maxHeap) {
+        return maxHeap.subtract(minSpaceSize());
     }
 
     protected UnsignedWord getInitialHeapSize() {

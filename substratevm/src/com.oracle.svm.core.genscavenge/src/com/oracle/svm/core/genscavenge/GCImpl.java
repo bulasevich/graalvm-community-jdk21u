@@ -394,12 +394,17 @@ public final class GCImpl implements GC {
         if (getCollectionEpoch().equal(0)) {
             printGCPrefixAndTime().string("Using ").string(getName()).newline();
             Log log = printGCPrefixAndTime().spaces(2).string("Memory: ");
+<<<<<<< HEAD
             if (!PhysicalMemory.isInitialized()) {
                 log.string("unknown").newline();
             } else {
                 log.rational(PhysicalMemory.getCachedSize(), M, 0).string("M").newline();
             }
             printGCPrefixAndTime().spaces(2).string("Heap policy: ").string(getPolicy().getName()).newline();
+=======
+            log.rational(PhysicalMemory.size(), M, 0).string("M").newline();
+            printGCPrefixAndTime().spaces(2).string("GC policy: ").string(getPolicy().getName()).newline();
+>>>>>>> 3944182a255 (Fix serial GC heap size computation.)
             printGCPrefixAndTime().spaces(2).string("Maximum young generation size: ").rational(getPolicy().getMaximumYoungGenerationSize(), M, 0).string("M").newline();
             printGCPrefixAndTime().spaces(2).string("Maximum heap size: ").rational(getPolicy().getMaximumHeapSize(), M, 0).string("M").newline();
             printGCPrefixAndTime().spaces(2).string("Minimum heap size: ").rational(getPolicy().getMinimumHeapSize(), M, 0).string("M").newline();

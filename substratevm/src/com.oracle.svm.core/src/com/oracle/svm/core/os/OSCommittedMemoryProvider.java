@@ -33,14 +33,18 @@ import org.graalvm.nativeimage.Platform;
 import org.graalvm.nativeimage.Platforms;
 import org.graalvm.nativeimage.c.type.WordPointer;
 import org.graalvm.word.PointerBase;
+import org.graalvm.word.UnsignedWord;
 
 import com.oracle.svm.core.Isolates;
+import com.oracle.svm.core.SubstrateGCOptions;
 import com.oracle.svm.core.SubstrateOptions;
 import com.oracle.svm.core.Uninterruptible;
 import com.oracle.svm.core.c.function.CEntryPointCreateIsolateParameters;
 import com.oracle.svm.core.c.function.CEntryPointErrors;
 import com.oracle.svm.core.feature.AutomaticallyRegisteredFeature;
 import com.oracle.svm.core.feature.InternalFeature;
+import com.oracle.svm.core.heap.ReferenceAccess;
+import com.oracle.svm.core.util.UnsignedUtils;
 
 public class OSCommittedMemoryProvider extends ChunkBasedCommittedMemoryProvider {
     @Platforms(Platform.HOSTED_ONLY.class)
@@ -79,5 +83,15 @@ class OSCommittedMemoryProviderFeature implements InternalFeature {
         if (!ImageSingletons.contains(CommittedMemoryProvider.class)) {
             ImageSingletons.add(CommittedMemoryProvider.class, new OSCommittedMemoryProvider());
         }
+    }
+
+    @Override
+    public UnsignedWord getReservedAddressSpaceSize() {
+        UnsignedWord maxAddressSpaceSize = ReferenceAccess.singleton().getMaxAddressSpaceSize();
+        UnsignedWord optionValue = Word.unsigned(SubstrateGCOptions.ReservedAddressSpaceSize.getValue());
+        if (optionValue.notEqual(0)) {
+            return UnsignedUtils.min(optionValue, maxAddressSpaceSize);
+        }
+        return maxAddressSpaceSize;
     }
 }
