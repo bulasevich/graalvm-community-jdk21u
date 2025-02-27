@@ -60,7 +60,7 @@ public final class HeapSizeVerifier {
     }
 
     private static void verifyAgainstAddressSpace(UnsignedWord actualValue, String actualValueName) {
-        UnsignedWord addressSpaceSize = ReferenceAccess.singleton().getAddressSpaceSize();
+        UnsignedWord addressSpaceSize = ReferenceAccess.singleton().getMaxAddressSpaceSize();
         if (actualValue.aboveThan(addressSpaceSize)) {
             throwError(actualValue, actualValueName, addressSpaceSize, "largest possible address space");
         }
