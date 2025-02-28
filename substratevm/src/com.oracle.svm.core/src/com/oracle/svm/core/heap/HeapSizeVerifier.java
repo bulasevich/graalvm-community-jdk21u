@@ -69,24 +69,28 @@ public final class HeapSizeVerifier {
     private static void verifyMinHeapSizeAgainstMaxHeapSize(UnsignedWord minHeapSize) {
         UnsignedWord maxHeapSize = WordFactory.unsigned(SubstrateGCOptions.MaxHeapSize.getValue());
         if (maxHeapSize.notEqual(0) && minHeapSize.aboveThan(maxHeapSize)) {
-            throwError(minHeapSize, "minimum heap size", maxHeapSize, "maximum heap size");
+            String message = formatError(minHeapSize, MIN_HEAP_SIZE_NAME, maxHeapSize, MAX_HEAP_SIZE_NAME);
+            throw reportError(message);
         }
     }
 
     private static void verifyMaxNewSizeAgainstMaxHeapSize(UnsignedWord maxNewSize) {
         UnsignedWord maxHeapSize = WordFactory.unsigned(SubstrateGCOptions.MaxHeapSize.getValue());
         if (maxHeapSize.notEqual(0) && maxNewSize.aboveThan(maxHeapSize)) {
-            throwError(maxNewSize, "maximum new generation size", maxHeapSize, "maximum heap size");
+            String message = formatError(maxNewSize, MAX_NEW_SIZE_NAME, maxHeapSize, MAX_HEAP_SIZE_NAME);
+            throw reportError(message);
         }
     }
 
-    private static void throwError(UnsignedWord actualValue, String actualValueName, UnsignedWord maxValue, String maxValueName) throws UserException {
+    private static RuntimeException reportError(String message) throws UserException {
         if (SubstrateUtil.HOSTED) {
-            throw UserError.abort("The specified %s (%s) is larger than the %s (%s).", actualValueName, format(actualValue), maxValueName, format(maxValue));
-        } else {
-            throw new IllegalArgumentException(
-                            "The specified " + actualValueName + " (" + format(actualValue) + ") is larger than the " + maxValueName + " (" + format(maxValue) + ").");
+            throw UserError.abort(message);
         }
+        throw new IllegalArgumentException(message);
+    }
+
+    private static String formatError(UnsignedWord actualValue, String actualValueName, UnsignedWord maxValue, String maxValueName) {
+        return "The specified " + actualValueName + " (" + format(actualValue) + ") must not be larger than the " + maxValueName + " (" + format(maxValue) + ").";
     }
 
     private static String format(UnsignedWord bytes) {
