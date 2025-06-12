@@ -28,6 +28,7 @@ import static com.oracle.svm.core.Uninterruptible.CALLED_FROM_UNINTERRUPTIBLE_CO
 import static com.oracle.svm.core.option.RuntimeOptionKey.RuntimeOptionKeyFlag.RelevantForCompilationIsolates;
 
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.graalvm.collections.EconomicMap;
@@ -107,7 +108,6 @@ import com.oracle.svm.core.threadlocal.FastThreadLocalBytes;
 import com.oracle.svm.core.threadlocal.FastThreadLocalFactory;
 import com.oracle.svm.core.threadlocal.VMThreadLocalInfos;
 import com.oracle.svm.core.util.CounterSupport;
-import com.oracle.svm.core.util.ImageHeapList;
 import com.oracle.svm.core.util.TimeUtils;
 import com.oracle.svm.core.util.VMError;
 
@@ -319,6 +319,15 @@ public class SubstrateDiagnostics {
         while (fatalErrorState.diagnosticThunkIndex < numDiagnosticThunks) {
             int index = fatalErrorState.diagnosticThunkIndex;
             DiagnosticThunk thunk = DiagnosticThunkRegistry.singleton().getThunk(index);
+// graal build time error:
+//    com.oracle.svm.core.jdk.VMErrorSubstitutions.shutdown(VMErrorSubstitutions.java:148)
+//    com.oracle.svm.core.jdk.VMErrorSubstitutions.doShutdown(VMErrorSubstitutions.java:171)
+//    com.oracle.svm.core.SubstrateDiagnostics.printFatalError(SubstrateDiagnostics.java:297)
+//    com.oracle.svm.core.SubstrateDiagnostics.printFatalErrorForCurrentState(SubstrateDiagnostics.java:321)
+//    com.oracle.svm.core.SubstrateDiagnostics$DiagnosticThunkRegistry.getThunk(SubstrateDiagnostics.java:1296)
+//    java.util.ArrayList.get(ArrayList.java:427)
+//    jdk.internal.util.Preconditions.checkIndex(Preconditions.java:302)
+//    jdk.internal.util.Preconditions.outOfBoundsCheckIndex(BiFunction, int, int)
 
             // Start at the configured initial invocation count.
             if (fatalErrorState.invocationCount == 0) {
@@ -1213,7 +1222,7 @@ public class SubstrateDiagnostics {
         @Platforms(Platform.HOSTED_ONLY.class) //
         final int runtimeCompilationPosition;
 
-        private final List<DiagnosticThunk> thunks = ImageHeapList.create(DiagnosticThunk.class);
+        private final List<DiagnosticThunk> thunks = new ArrayList<>();
         private int[] initialInvocationCount;
 
         @Fold
@@ -1251,7 +1260,7 @@ public class SubstrateDiagnostics {
 
         @Platforms(Platform.HOSTED_ONLY.class)
         public synchronized void register(DiagnosticThunk diagnosticThunk) {
-            thunks.add(thunk);
+            thunks.add(diagnosticThunk);
             resizeInitialInvocationCount();
         }
 
