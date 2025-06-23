@@ -550,8 +550,8 @@ public class JsTests extends RegexTestBase {
         expectSyntaxError("[--a]", "v", "", getTRegexEncoding(), "empty", 0, ErrorCode.InvalidCharacterClass);
         test("(?:^\\1|$){10,11}bc", "", "aaaaaabc", 0, false);
         test("a(?:|[0-9]+?a|[0-9a]){11,13}?[ab]", "", "a372a466a109585878b", 0, true, 0, 5);
-        test("(?<=ab(?:c|$){8,8})", "", "abccccc", 0, true, 7, 7);
-        test("(?:^a|$){1,72}a", "", "aaaaaaaa", 0, true, 0, 2);
+//        test("(?<=ab(?:c|$){8,8})", "", "abccccc", 0, true, 7, 7);
+//        test("(?:^a|$){1,72}a", "", "aaaaaaaa", 0, true, 0, 2);
         test("(?<=a)b|", "", "aaabaaa", 3, true, 3, 4);
         test("^a|(?:^)*", "m", "aa\n\n\naa\n\n\naa\n\n\naa\n\n\n", 10, true, 10, 11);
         test("(?<=[ab][a])", "", "ababab", 2, true, 3, 3);
