@@ -104,7 +104,7 @@ public final class IdentityHashCodeSupport {
              * Between the snippet and execution of this method, another thread could have set the
              * header bit and a GC could have triggered and added the field.
              */
-            int offset = LayoutEncoding.getIdentityHashOffset(obj);
+            int offset = LayoutEncoding.getOptionalIdentityHashOffset(obj);
             return ObjectAccess.readInt(obj, offset, IdentityHashCodeSupport.IDENTITY_HASHCODE_LOCATION);
         }
         if (!oh.hasIdentityHashFromAddress(header)) {

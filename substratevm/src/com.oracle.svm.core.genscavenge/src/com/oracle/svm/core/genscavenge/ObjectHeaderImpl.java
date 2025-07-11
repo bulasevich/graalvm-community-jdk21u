@@ -426,4 +426,9 @@ public final class ObjectHeaderImpl extends ObjectHeader {
     static boolean hasFixedIdentityHashField() {
         return ConfigurationValues.getObjectLayout().hasFixedIdentityHashField();
     }
+
+    @Fold
+    static boolean isIdentityHashFieldOptional() {
+        return ConfigurationValues.getObjectLayout().isIdentityHashFieldOptional();
+    }
 }

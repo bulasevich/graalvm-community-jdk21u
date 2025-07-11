@@ -151,6 +151,11 @@ public final class ObjectLayout {
         return arrayLengthOffset;
     }
 
+    @Uninterruptible(reason = "Called from uninterruptible code.", mayBeInlined = true)
+    public boolean isIdentityHashFieldOptional() {
+        return true; //identityHashMode == IdentityHashMode.OPTIONAL.value;
+    }
+
     /** If {@link #hasFixedIdentityHashField()}, then returns that offset. */
     @Uninterruptible(reason = "Called from uninterruptible code.", mayBeInlined = true)
     public int getFixedIdentityHashOffset() {
