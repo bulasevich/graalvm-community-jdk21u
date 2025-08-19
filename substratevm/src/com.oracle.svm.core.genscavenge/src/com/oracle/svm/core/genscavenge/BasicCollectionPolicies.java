@@ -26,6 +26,7 @@ package com.oracle.svm.core.genscavenge;
 
 import static com.oracle.svm.core.genscavenge.CollectionPolicy.shouldCollectYoungGenSeparately;
 
+import org.graalvm.compiler.word.Word;
 import org.graalvm.nativeimage.Platform;
 import org.graalvm.nativeimage.Platforms;
 import org.graalvm.word.UnsignedWord;
@@ -38,8 +39,6 @@ import com.oracle.svm.core.heap.PhysicalMemory;
 import com.oracle.svm.core.os.CommittedMemoryProvider;
 import com.oracle.svm.core.util.TimeUtils;
 import com.oracle.svm.core.util.VMError;
-
-import jdk.graal.compiler.word.Word;
 
 /** Basic/legacy garbage collection policies. */
 final class BasicCollectionPolicies {
