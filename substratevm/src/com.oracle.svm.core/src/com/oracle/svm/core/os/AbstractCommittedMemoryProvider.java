@@ -31,6 +31,7 @@ import static com.oracle.svm.core.Isolates.IMAGE_HEAP_WRITABLE_END;
 import static org.graalvm.word.WordFactory.nullPointer;
 
 import org.graalvm.compiler.api.replacements.Fold;
+import org.graalvm.compiler.word.Word;
 import org.graalvm.word.Pointer;
 import org.graalvm.word.PointerBase;
 import org.graalvm.word.UnsignedWord;
@@ -41,8 +42,6 @@ import com.oracle.svm.core.Uninterruptible;
 import com.oracle.svm.core.c.function.CEntryPointErrors;
 import com.oracle.svm.core.heap.Heap;
 import com.oracle.svm.core.util.UnsignedUtils;
-
-import jdk.graal.compiler.word.Word;
 
 public abstract class AbstractCommittedMemoryProvider implements CommittedMemoryProvider {
     @Fold
