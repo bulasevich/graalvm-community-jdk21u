@@ -24,6 +24,8 @@
  */
 package com.oracle.svm.core.genscavenge;
 
+import static com.oracle.svm.core.Uninterruptible.CALLED_FROM_UNINTERRUPTIBLE_CODE;
+
 import org.graalvm.compiler.word.Word;
 import org.graalvm.nativeimage.Platform;
 import org.graalvm.nativeimage.Platforms;
@@ -34,6 +36,8 @@ import org.graalvm.word.WordFactory;
 import com.oracle.svm.core.AlwaysInline;
 import com.oracle.svm.core.MemoryWalker;
 import com.oracle.svm.core.Uninterruptible;
+import com.oracle.svm.core.genscavenge.AlignedHeapChunk.AlignedHeader;
+import com.oracle.svm.core.genscavenge.UnalignedHeapChunk.UnalignedHeader;
 import com.oracle.svm.core.heap.ObjectVisitor;
 import com.oracle.svm.core.hub.LayoutEncoding;
 import com.oracle.svm.core.os.CommittedMemoryProvider;
@@ -75,6 +79,38 @@ public final class ImageHeapWalker {
         return walkPartitionInline(firstObject, lastObject, visitor, alignedChunks, false);
     }
 
+    public static void walkImageHeapChunks(ImageHeapInfo heapInfo, HeapChunkVisitor visitor) {
+        /* Walk all aligned chunks (can only be at the start of the image heap). */
+        Object firstObject = heapInfo.firstObject;
+        if (ObjectHeaderImpl.isAlignedObject(firstObject)) {
+            HeapChunk.Header<?> alignedChunks = getImageHeapChunkForObject(firstObject, true);
+            walkChunks(alignedChunks, visitor, true);
+        }
+
+        /* Walk all unaligned chunks (can only be at the end of the image heap). */
+        Object firstUnalignedObject = heapInfo.firstWritableHugeObject;
+        if (firstUnalignedObject == null) {
+            firstUnalignedObject = heapInfo.firstReadOnlyHugeObject;
+        }
+        if (firstUnalignedObject != null) {
+            HeapChunk.Header<?> unalignedChunks = getImageHeapChunkForObject(firstUnalignedObject, false);
+            walkChunks(unalignedChunks, visitor, false);
+        }
+    }
+
+    @NeverInline("Not performance critical")
+    private static void walkChunks(HeapChunk.Header<?> firstChunk, HeapChunkVisitor visitor, boolean alignedChunks) {
+        HeapChunk.Header<?> currentChunk = firstChunk;
+        while (currentChunk.isNonNull()) {
+            if (alignedChunks) {
+                visitor.visitAlignedChunk((AlignedHeader) currentChunk);
+            } else {
+                visitor.visitUnalignedChunk((UnalignedHeader) currentChunk);
+            }
+            currentChunk = HeapChunk.getNext(currentChunk);
+        }
+    }
+
     @AlwaysInline("GC performance")
     @Uninterruptible(reason = "Called from uninterruptible code.", mayBeInlined = true)
     static boolean walkPartitionInline(Object firstObject, Object lastObject, ObjectVisitor visitor, boolean alignedChunks) {
@@ -91,20 +127,10 @@ public final class ImageHeapWalker {
         Pointer firstPointer = Word.objectToUntrackedPointer(firstObject);
         Pointer lastPointer = Word.objectToUntrackedPointer(lastObject);
         Pointer current = firstPointer;
-        HeapChunk.Header<?> currentChunk = WordFactory.nullPointer();
-        if (HeapImpl.usesImageHeapChunks()) {
-            Pointer base = WordFactory.zero();
-            if (!CommittedMemoryProvider.get().guaranteesHeapPreferredAddressSpaceAlignment()) {
-                base = HeapImpl.getImageHeapStart();
-            }
-            Pointer offset = current.subtract(base);
-            UnsignedWord chunkOffset = alignedChunks ? UnsignedUtils.roundDown(offset, HeapParameters.getAlignedHeapChunkAlignment())
-                            : offset.subtract(UnalignedHeapChunk.getObjectStartOffset());
-            currentChunk = (HeapChunk.Header<?>) chunkOffset.add(base);
 
-            // Assumption: the order of chunks in their linked list is the same order as in memory,
-            // and objects are laid out as a continuous sequence without any gaps.
-        }
+        // Assumption: the order of chunks in their linked list is the same order as in memory,
+        // and objects in a chunk are laid out as a continuous sequence without any gaps.
+        HeapChunk.Header<?> currentChunk = getImageHeapChunkForObject(firstObject, alignedChunks);
         do {
             Pointer limit = lastPointer;
             if (HeapImpl.usesImageHeapChunks()) {
@@ -126,8 +152,8 @@ public final class ImageHeapWalker {
             }
             if (HeapImpl.usesImageHeapChunks() && current.belowThan(lastPointer)) {
                 currentChunk = HeapChunk.getNext(currentChunk);
-                current = alignedChunks ? AlignedHeapChunk.getObjectsStart((AlignedHeapChunk.AlignedHeader) currentChunk)
-                                : UnalignedHeapChunk.getObjectStart((UnalignedHeapChunk.UnalignedHeader) currentChunk);
+                current = alignedChunks ? AlignedHeapChunk.getObjectsStart((AlignedHeader) currentChunk)
+                                : UnalignedHeapChunk.getObjectStart((UnalignedHeader) currentChunk);
                 // Note: current can be equal to lastPointer now, despite not having visited it yet
             }
         } while (current.belowOrEqual(lastPointer));
@@ -142,6 +168,17 @@ public final class ImageHeapWalker {
     @Uninterruptible(reason = "Bridge between uninterruptible and potentially interruptible code.", mayBeInlined = true, calleeMustBe = false)
     private static boolean visitObjectInline(ObjectVisitor visitor, Object currentObject) {
         return visitor.visitObjectInline(currentObject);
+    }
+
+    /** Computes the enclosing chunk without assuming that the image heap is aligned. */
+    @Uninterruptible(reason = CALLED_FROM_UNINTERRUPTIBLE_CODE, mayBeInlined = true)
+    private static HeapChunk.Header<?> getImageHeapChunkForObject(Object object, boolean alignedChunks) {
+        Pointer objPtr = Word.objectToUntrackedPointer(object);
+        Pointer base = Heap.getHeap().getImageHeapStart();
+        Pointer offset = objPtr.subtract(base);
+        UnsignedWord chunkOffset = alignedChunks ? UnsignedUtils.roundDown(offset, HeapParameters.getAlignedHeapChunkAlignment())
+                        : offset.subtract(UnalignedHeapChunk.getOffsetForObject(objPtr));
+        return (HeapChunk.Header<?>) chunkOffset.add(base);
     }
 }
 

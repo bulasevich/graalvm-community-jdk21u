@@ -76,7 +76,7 @@ class HeapChunkLogging {
         }
     }
 
-    private static void logChunk(Log log, HeapChunk.Header<?> chunk, Pointer bottom, Pointer top, Pointer end, boolean isAligned, String shortSpaceName, boolean isFromSpace) {
+    public static void logChunk(Log log, HeapChunk.Header<?> chunk, Pointer bottom, Pointer top, Pointer end, boolean isAligned, String shortSpaceName, boolean isFromSpace) {
         UnsignedWord used = top.subtract(bottom);
         UnsignedWord capacity = end.subtract(bottom);
         UnsignedWord usedPercent = used.multiply(100).unsignedDivide(capacity);

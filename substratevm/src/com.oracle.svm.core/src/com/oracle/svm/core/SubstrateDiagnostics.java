@@ -760,6 +760,7 @@ public class SubstrateDiagnostics {
                         }
                     }
                     log.string(", stack(").zhex(VMThreads.StackEnd.get(thread)).string(",").zhex(VMThreads.StackBase.get(thread)).string(")");
+                    log.string(", OS thread ").signed(VMThreads.OSThreadIdTL.get(thread)).string(" (").zhex(VMThreads.OSThreadHandleTL.get(thread)).string(")");
                     log.newline();
                     printed++;
                 }
@@ -881,7 +882,10 @@ public class SubstrateDiagnostics {
             Platform platform = ImageSingletons.lookup(Platform.class);
             log.string("Platform: ").string(platform.getOS()).string("/").string(platform.getArchitecture()).newline();
             log.string("Page size: ").unsigned(SubstrateOptions.getPageSize()).newline();
-            log.string("Container support: ").bool(Containers.Options.UseContainerSupport.getValue()).newline();
+            if (RuntimeCompilation.isEnabled()) {
+                log.string("Supports isolated compilation: ").bool(SubstrateOptions.supportCompileInIsolates()).newline();
+            }
+            log.string("Container support: ").bool(Container.isSupported()).newline();
             log.string("CPU features used for AOT compiled code: ").string(getBuildTimeCpuFeatures()).newline();
             log.indent(false);
         }
@@ -902,6 +906,12 @@ public class SubstrateDiagnostics {
         @RestrictHeapAccess(access = RestrictHeapAccess.Access.NO_ALLOCATION, reason = "Must not allocate while printing diagnostics.")
         public void printDiagnostics(Log log, ErrorContext context, int maxDiagnosticLevel, int invocationCount) {
             log.string("Runtime information:").indent(true);
+            if (RuntimeCompilation.isEnabled() && IsolateArgumentParser.isCompilationIsolate()) {
+                log.string(" (compilation isolate)");
+            }
+            log.newline();
+
+            log.string("Containerized: ").bool(Container.singleton().isContainerized()).newline();
 
             log.string("CPU cores (OS): ");
             if (!SubstrateOptions.AsyncSignalSafeDiagnostics.getValue() && SubstrateOptions.JNI.getValue()) {
@@ -929,6 +939,9 @@ public class SubstrateDiagnostics {
             Pointer codeEnd = codeStart.add(codeSize).subtract(1);
             log.string("AOT compiled code: ").zhex(codeStart).string(" - ").zhex(codeEnd).newline();
 
+            if (RuntimeCompilation.isEnabled()) {
+                log.string("Compile in isolates: ").bool(SubstrateOptions.shouldCompileInIsolates()).newline();
+            }
             log.indent(false);
         }
     }

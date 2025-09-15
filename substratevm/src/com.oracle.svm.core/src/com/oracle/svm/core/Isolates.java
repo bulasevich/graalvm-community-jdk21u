@@ -38,6 +38,8 @@ import com.oracle.svm.core.c.function.CEntryPointCreateIsolateParameters;
 import com.oracle.svm.core.c.function.CEntryPointErrors;
 import com.oracle.svm.core.c.function.CEntryPointSetup;
 import com.oracle.svm.core.code.CodeInfoTable;
+import com.oracle.svm.core.genscavenge.AlignedHeapChunk.AlignedHeader;
+import com.oracle.svm.core.genscavenge.UnalignedHeapChunk.UnalignedHeader;
 import com.oracle.svm.core.heap.Heap;
 import com.oracle.svm.core.os.CommittedMemoryProvider;
 import com.oracle.svm.core.util.VMError;
@@ -107,11 +109,17 @@ public class Isolates {
 
     @Uninterruptible(reason = "Thread state not yet set up.")
     public static int checkIsolate(Isolate isolate) {
-        if (SubstrateOptions.SpawnIsolates.getValue()) {
-            return isolate.isNull() ? CEntryPointErrors.NULL_ARGUMENT : CEntryPointErrors.NO_ERROR;
-        } else {
-            return isolate.equal(CEntryPointSetup.SINGLE_ISOLATE_SENTINEL) ? CEntryPointErrors.NO_ERROR : CEntryPointErrors.UNINITIALIZED_ISOLATE;
+        if (isolate.isNull()) {
+            return CEntryPointErrors.NULL_ARGUMENT;
+        } else if (SubstrateOptions.SpawnIsolates.getValue() && !PointerUtils.isAMultiple(isolate, Word.signed(Heap.getHeap().getHeapBaseAlignment()))) {
+            /*
+             * The Isolate pointer is currently the same as the heap base, so we can check if the
+             * alignment matches the one that is expected for the heap base. This will detect most
+             * (but not all) invalid isolates.
+             */
+            return CEntryPointErrors.INVALID_ISOLATE_ARGUMENT;
         }
+        return CEntryPointErrors.NO_ERROR;
     }
 
     @Uninterruptible(reason = "Thread state not yet set up.")
