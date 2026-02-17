@@ -1,5 +1,5 @@
 [![GraalVM](.github/assets/logo_320x64.svg)][website]
-
+ 
 [![GraalVM Gate][badge-gate]][gate] [![GraalVM docs][badge-docs]][docs] [![GraalVM on Slack][badge-slack]][slack] [![GraalVM on Twitter][badge-twitter]][twitter] [![GraalVM on YouTube][badge-yt]][youtube]  [![License][badge-license]](#license)
 
 Welcome to the **maintenance repository** of GraalVM Community Edition for JDK 21. This is a **source-only** repository maintained by the GraalVM community.
