@@ -34,6 +34,7 @@ import org.graalvm.word.UnsignedWord;
 import org.graalvm.word.WordFactory;
 
 import com.oracle.svm.core.AlwaysInline;
+import com.oracle.svm.core.NeverInline;
 import com.oracle.svm.core.MemoryWalker;
 import com.oracle.svm.core.Uninterruptible;
 import com.oracle.svm.core.genscavenge.AlignedHeapChunk.AlignedHeader;
@@ -174,10 +175,10 @@ public final class ImageHeapWalker {
     @Uninterruptible(reason = CALLED_FROM_UNINTERRUPTIBLE_CODE, mayBeInlined = true)
     private static HeapChunk.Header<?> getImageHeapChunkForObject(Object object, boolean alignedChunks) {
         Pointer objPtr = Word.objectToUntrackedPointer(object);
-        Pointer base = Heap.getHeap().getImageHeapStart();
+        Pointer base = HeapImpl.getImageHeapStart();
         Pointer offset = objPtr.subtract(base);
         UnsignedWord chunkOffset = alignedChunks ? UnsignedUtils.roundDown(offset, HeapParameters.getAlignedHeapChunkAlignment())
-                        : offset.subtract(UnalignedHeapChunk.getOffsetForObject(objPtr));
+                                                 : offset.subtract(UnalignedHeapChunk.getObjectStartOffset());
         return (HeapChunk.Header<?>) chunkOffset.add(base);
     }
 }

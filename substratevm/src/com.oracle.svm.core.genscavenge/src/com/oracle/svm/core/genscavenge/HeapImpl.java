@@ -273,9 +273,8 @@ public final class HeapImpl extends Heap {
 
     void logChunks(Log log) {
         imageHeapChunkLogger.initialize(log);
-        for (ImageHeapInfo info : HeapImpl.getImageHeapInfos()) {
-            ImageHeapWalker.walkImageHeapChunks(info, imageHeapChunkLogger);
-        }
+        ImageHeapInfo info = HeapImpl.getImageHeapInfo();
+        ImageHeapWalker.walkImageHeapChunks(info, imageHeapChunkLogger);
         if (AuxiliaryImageHeap.isPresent()) {
             AuxiliaryImageHeap.singleton().walkHeapChunks(imageHeapChunkLogger);
         }

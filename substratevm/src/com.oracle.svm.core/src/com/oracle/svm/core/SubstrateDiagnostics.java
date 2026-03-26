@@ -885,7 +885,6 @@ public class SubstrateDiagnostics {
             if (RuntimeCompilation.isEnabled()) {
                 log.string("Supports isolated compilation: ").bool(SubstrateOptions.supportCompileInIsolates()).newline();
             }
-            log.string("Container support: ").bool(Container.isSupported()).newline();
             log.string("CPU features used for AOT compiled code: ").string(getBuildTimeCpuFeatures()).newline();
             log.indent(false);
         }
@@ -911,7 +910,7 @@ public class SubstrateDiagnostics {
             }
             log.newline();
 
-            log.string("Containerized: ").bool(Container.singleton().isContainerized()).newline();
+            log.string("Containerized: ").bool(Containers.isContainerized()).newline();
 
             log.string("CPU cores (OS): ");
             if (!SubstrateOptions.AsyncSignalSafeDiagnostics.getValue() && SubstrateOptions.JNI.getValue()) {
