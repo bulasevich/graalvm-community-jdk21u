@@ -910,7 +910,8 @@ public class SubstrateDiagnostics {
             }
             log.newline();
 
-            log.string("Containerized: ").bool(Containers.isContainerized()).newline();
+            // warning: Restricted method: 'DumpMachineInfo.printDiagnostics' calls 'CgroupSubsystemFactory.determineType(String, String, String)' that violates restriction NO_ALLOCATION.
+            // log.string("Containerized: ").bool(Containers.isContainerized()).newline();
 
             log.string("CPU cores (OS): ");
             if (!SubstrateOptions.AsyncSignalSafeDiagnostics.getValue() && SubstrateOptions.JNI.getValue()) {
